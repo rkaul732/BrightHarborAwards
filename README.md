@@ -4,7 +4,8 @@ A staff recognition app for Bright Harbor Healthcare. It runs on Netlify with Ne
 
 ## What it does
 
-- Email link sign-in, with directory membership required for app access
+- Password sign-in; new staff create a password, then confirm their account by email before signing in
+- Existing passwordless accounts can use an email link and are prompted to create a password
 - Staff shout-outs, feed likes, comments, and comment likes
 - Point calculation based on the nominator's role and program relative to an employee recipient
 - Admin-managed staff directory and personal dashboard
@@ -15,7 +16,7 @@ Supervisors and directors can receive shout-outs, but earn zero points because t
 ## Set up Supabase
 
 1. The recognition schema is applied to the `BrightHarborAwards` Supabase project. The matching source migration is `supabase/migrations/20261110191014_recognition.sql`.
-2. Enable email link sign-in in Supabase Auth. Set `https://brightharborawards.netlify.app` as the Site URL and allow `https://brightharborawards.netlify.app/auth/callback` as a redirect URL. Allow `http://localhost:3000/auth/callback` for local development. Email links must return to `/auth/callback` so the server can exchange the one-time code for a cookie session.
+2. Keep **Email** sign-in, **Allow new users to sign up**, and **Confirm Email** enabled in Supabase Auth. Creating a password calls Supabase `signUp`, which sends the account confirmation email. Set `https://brightharborawards.netlify.app` as the Site URL and allow `https://brightharborawards.netlify.app/auth/callback` as a redirect URL. Allow `http://localhost:3000/auth/callback` for local development. Confirmation and sign-in links must return to `/auth/callback` so the server can exchange the one-time code for a cookie session.
 3. Copy `.env.example` to `.env.local` for local development. Set `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, and `BOOTSTRAP_ADMIN_EMAIL`. The bootstrap address is the only person allowed to create the initial administrator profile.
 4. Keep the secret key server-side. It must never be exposed with `NEXT_PUBLIC_`.
 
@@ -31,7 +32,7 @@ Verify a sending domain in Resend, then connect Resend to Supabase Auth as its c
 2. Import that repository in Netlify. The build command is `npm run build`; `netlify.toml` sets Node 22.
 3. Add all variables from `.env.example` in Netlify's environment settings. The public Supabase values are needed at build time; the secret and Resend values are server-only.
 4. Deploy, then add the resulting URL to Supabase Auth's Site URL and redirect allow list.
-5. Sign in with `BOOTSTRAP_ADMIN_EMAIL`, complete the administrator profile, and add staff emails, programs, and roles in **Manage directory**.
+5. Sign in with `BOOTSTRAP_ADMIN_EMAIL`, complete the administrator profile, and add staff emails, programs, and roles in **Manage directory**. Existing accounts created with email links are prompted to create a password at their next sign-in. New staff should choose **First time? Create account**, create a password, then open their confirmation email.
 
 ## Development
 
