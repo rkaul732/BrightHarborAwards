@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Bright Harbor | Recognition",
-  description: "A place to celebrate the people who make Bright Harbor shine.",
+  title: "Bright Harbor Healthcare | Recognition",
+  description: "Celebrate the people who make Bright Harbor shine.",
   icons: { icon: "/favicon.svg" },
 };
 
