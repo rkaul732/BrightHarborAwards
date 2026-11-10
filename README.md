@@ -14,12 +14,12 @@ Supervisors and directors can receive shout-outs, but earn zero points because t
 
 ## Set up Supabase
 
-1. Create a Supabase project and run `supabase/migrations/20261110170000_recognition.sql` in its SQL editor (or apply it with the Supabase CLI).
-2. Enable email link sign-in in Supabase Auth. Add the production Netlify URL to the Auth URL configuration, including the allowed redirect URLs.
+1. The recognition schema is applied to the `BrightHarborAwards` Supabase project. The matching source migration is `supabase/migrations/20261110191014_recognition.sql`.
+2. Enable email link sign-in in Supabase Auth. Set `https://brightharborawards.netlify.app` as the Site URL and allow `https://brightharborawards.netlify.app/auth/callback` as a redirect URL. Allow `http://localhost:3000/auth/callback` for local development. Email links must return to `/auth/callback` so the server can exchange the one-time code for a cookie session.
 3. Copy `.env.example` to `.env.local` for local development. Set `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, and `BOOTSTRAP_ADMIN_EMAIL`. The bootstrap address is the only person allowed to create the initial administrator profile.
 4. Keep the secret key server-side. It must never be exposed with `NEXT_PUBLIC_`.
 
-The database tables have row level security enabled and direct access from browser keys revoked. The Next.js API validates the Supabase access token and directory membership before using its server-only database credential.
+The database tables have row level security enabled and direct access from browser keys revoked. The Next.js proxy refreshes cookie sessions, `/` verifies the session before rendering, and `/login` is public. The API separately validates the Supabase access token and directory membership before using its server-only database credential.
 
 ## Set up Resend
 
