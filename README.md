@@ -1,6 +1,6 @@
 # Bright Harbor Recognition
 
-A staff recognition app for Bright Harbor Healthcare. It runs on Netlify with Next.js, uses Supabase Auth and Postgres for the staff directory and feed, and sends recognition emails through Resend. The source is ready for a GitHub repository.
+A staff recognition app for Bright Harbor Healthcare. It runs on Netlify with Next.js, uses Supabase Auth and Postgres for the staff directory and feed, and sends recognition emails through Resend. The source is hosted in `rkaul732/BrightHarborAwards`.
 
 ## What it does
 
