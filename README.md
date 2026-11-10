@@ -16,8 +16,8 @@ Supervisors and directors can receive shout-outs, but earn zero points because t
 
 1. Create a Supabase project and run `supabase/migrations/20261110170000_recognition.sql` in its SQL editor (or apply it with the Supabase CLI).
 2. Enable email link sign-in in Supabase Auth. Add the production Netlify URL to the Auth URL configuration, including the allowed redirect URLs.
-3. Copy `.env.example` to `.env.local` for local development. Set `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and `BOOTSTRAP_ADMIN_EMAIL`. The bootstrap address is the only person allowed to create the initial administrator profile.
-4. Keep the service role key server-side. It must never be exposed with `NEXT_PUBLIC_`.
+3. Copy `.env.example` to `.env.local` for local development. Set `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, and `BOOTSTRAP_ADMIN_EMAIL`. The bootstrap address is the only person allowed to create the initial administrator profile.
+4. Keep the secret key server-side. It must never be exposed with `NEXT_PUBLIC_`.
 
 The database tables have row level security enabled and direct access from browser keys revoked. The Next.js API validates the Supabase access token and directory membership before using its server-only database credential.
 
@@ -29,7 +29,7 @@ Verify a sending domain in Resend, then set `RESEND_API_KEY` and `RESEND_FROM` i
 
 1. Push this folder to a GitHub repository.
 2. Import that repository in Netlify. The build command is `npm run build`; `netlify.toml` sets Node 22.
-3. Add all variables from `.env.example` in Netlify's environment settings. The public Supabase values are needed at build time; the service role and Resend values are server-only.
+3. Add all variables from `.env.example` in Netlify's environment settings. The public Supabase values are needed at build time; the secret and Resend values are server-only.
 4. Deploy, then add the resulting URL to Supabase Auth's Site URL and redirect allow list.
 5. Sign in with `BOOTSTRAP_ADMIN_EMAIL`, complete the administrator profile, and add staff emails, programs, and roles in **Manage directory**.
 
