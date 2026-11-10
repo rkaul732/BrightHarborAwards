@@ -23,7 +23,7 @@ The database tables have row level security enabled and direct access from brows
 
 ## Set up Resend
 
-Verify a sending domain in Resend, then set `RESEND_API_KEY` and `RESEND_FROM` in Netlify. Resend is optional during local development; shout-outs still save if email is not configured or a send fails.
+Verify a sending domain in Resend, then connect Resend to Supabase Auth as its custom SMTP provider so staff can receive email sign-in links. Set `RESEND_API_KEY` and `RESEND_FROM` in Netlify for shout-out notifications. Resend is optional during local development; shout-outs still save if notification email is not configured or a send fails.
 
 ## Deploy to Netlify via GitHub
 
