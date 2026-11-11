@@ -74,6 +74,26 @@ export async function POST(request: Request) {
         const { data: previous } = await db.from("likes").select("id").eq("author_id", me.id).eq(column, targetId).maybeSingle();
         const result = previous ? await db.from("likes").delete().eq("id", previous.id) : await db.from("likes").insert({ author_id: me.id, [column]: targetId });
         if (result.error) throw result.error;
+      } else if (body.action === "redeemStoreItem") {
+        const productId = clean(body.productId, 100);
+        const options = body.options;
+        if (!productId || !options || typeof options !== "object" || Array.isArray(options) ||
+            Object.values(options).some((value) => typeof value !== "string")) return fail("Select an item and its options");
+        const { data: orderId, error } = await db.rpc("redeem_store_item", {
+          p_staff_id: me.id, p_product_id: productId, p_selected_options: options,
+        });
+        if (error) return fail(error.message, 400);
+        return Response.json({ ok: true, orderId });
+      } else if (body.action === "updateStoreOrder") {
+        if (me.role !== "admin") return fail("Admin access required", 403);
+        const orderId = clean(body.orderId, 100);
+        const status = body.status;
+        if (!orderId || (status !== "fulfilled" && status !== "cancelled")) return fail("Choose a valid order status");
+        const { data: order, error } = await db.from("store_orders")
+          .update({ status, updated_at: new Date().toISOString() })
+          .eq("id", orderId).eq("status", "pending").select("id").maybeSingle();
+        if (error) throw error;
+        if (!order) return fail("Only pending orders can be updated", 409);
       } else return fail("Unknown action");
     }
     return Response.json({ ok: true });
