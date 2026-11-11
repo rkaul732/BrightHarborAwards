@@ -40,9 +40,15 @@ export default function LoginForm() {
     try {
       const address = email.trim().toLowerCase();
       if (mode === "signIn") {
-        const { error: authError } = await supabase.auth.signInWithPassword({ email: address, password });
+        const { data, error: authError } = await supabase.auth.signInWithPassword({ email: address, password });
         if (authError) setError(authError.message);
-        else window.location.replace("/");
+        else {
+          if (data.user.user_metadata?.password_created !== true) {
+            const { error: updateError } = await supabase.auth.updateUser({ data: { password_created: true } });
+            if (updateError) throw updateError;
+          }
+          window.location.replace("/");
+        }
       } else if (mode === "create") {
         const { data, error: authError } = await supabase.auth.signUp({
           email: address,
@@ -66,8 +72,8 @@ export default function LoginForm() {
         if (authError) setError(authError.message);
         else setSent(true);
       }
-    } catch {
-      setError("Unable to reach the sign-in service. Please try again.");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Unable to reach the sign-in service. Please try again.");
     } finally {
       setLoading(false);
     }

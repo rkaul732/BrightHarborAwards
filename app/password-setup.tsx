@@ -3,7 +3,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { browserSupabase } from "../lib/supabase";
 
-export default function PasswordSetup({ onComplete }: { onComplete: () => void }) {
+export default function PasswordSetup({ email, onComplete, onSignOut }: { email: string; onComplete: () => void; onSignOut: () => void }) {
   const supabase = useMemo(browserSupabase, []);
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
@@ -27,13 +27,13 @@ export default function PasswordSetup({ onComplete }: { onComplete: () => void }
 
   return <main className="login-page">
     <div className="login-header"><img src="/bhh-logo.png" alt="Bright Harbor Healthcare" className="login-logo" /></div>
-    <section className="login-panel"><div className="eyebrow">FINISH SETTING UP YOUR ACCOUNT</div><h1>Create your<br/><em>password.</em></h1><p>Choose a password for future sign-ins.</p>
+    <section className="login-panel"><div className="eyebrow">FINISH SETTING UP YOUR ACCOUNT</div><h1>Create your<br/><em>password.</em></h1><p>Signed in as <strong>{email}</strong>. Choose a password for future sign-ins.</p>
       <form className="login-form" onSubmit={submit}>
         <label htmlFor="setup-password">New password</label><input id="setup-password" type="password" autoComplete="new-password" minLength={12} required value={password} onChange={(event) => setPassword(event.target.value)} />
         <label htmlFor="setup-confirm">Confirm password</label><input id="setup-confirm" type="password" autoComplete="new-password" minLength={12} required value={confirmation} onChange={(event) => setConfirmation(event.target.value)} />
         <button disabled={loading} className="button button-primary login-button" type="submit">{loading ? "Saving..." : "Save password"} <span>→</span></button>
         {error && <div className="login-feedback error" role="alert">{error}</div>}
-      </form></section>
+      </form><button type="button" className="login-link" onClick={onSignOut}>Use another account</button></section>
     <div className="login-decoration"><span>✳</span><span>★</span><span>✦</span></div>
   </main>;
 }

@@ -5,7 +5,7 @@ A staff recognition app for Bright Harbor Healthcare. It runs on Netlify with Ne
 ## What it does
 
 - Password sign-in; new staff create a password, then confirm their account by email before signing in
-- Existing passwordless accounts can use an email link and are prompted to create a password
+- Existing passwordless accounts can use an email link to create a password; a saved passwordless session opens the login page until they use that link
 - Staff shout-outs, feed likes, comments, and comment likes
 - Point calculation based on the nominator's role and program relative to an employee recipient
 - Admin-managed staff directory and personal dashboard
@@ -32,7 +32,7 @@ Verify a sending domain in Resend, then connect Resend to Supabase Auth as its c
 2. Import that repository in Netlify. The build command is `npm run build`; `netlify.toml` sets Node 22.
 3. Add all variables from `.env.example` in Netlify's environment settings. The public Supabase values are needed at build time; the secret and Resend values are server-only.
 4. Deploy, then add the resulting URL to Supabase Auth's Site URL and redirect allow list.
-5. Sign in with `BOOTSTRAP_ADMIN_EMAIL`, complete the administrator profile, and add staff emails, programs, and roles in **Manage directory**. Existing accounts created with email links are prompted to create a password at their next sign-in. New staff should choose **First time? Create account**, create a password, then open their confirmation email.
+5. Sign in with `BOOTSTRAP_ADMIN_EMAIL`, complete the administrator profile, and add staff emails, programs, and roles in **Manage directory**. Existing passwordless accounts should choose **Need a sign-in link?** and open the emailed link to create a password. New staff should choose **First time? Create account**, create a password, then open their confirmation email.
 
 ## Development
 

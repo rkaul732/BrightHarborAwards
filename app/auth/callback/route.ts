@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
       : "https://brightharborawards.netlify.app");
   if (!url || !key || !code) return NextResponse.redirect(new URL("/login?error=invalid_link", origin));
 
-  const response = NextResponse.redirect(new URL("/", origin));
+  let response = NextResponse.redirect(new URL("/", origin));
   const supabase = createServerClient(url, key, {
     cookies: {
       getAll: () => request.cookies.getAll(),
@@ -21,8 +21,13 @@ export async function GET(request: NextRequest) {
       },
     },
   });
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
   if (error) return NextResponse.redirect(new URL("/login?error=invalid_link", origin));
+  if (data.user?.user_metadata?.password_created !== true) {
+    const setupResponse = NextResponse.redirect(new URL("/?set-password=1", origin));
+    response.cookies.getAll().forEach((cookie) => setupResponse.cookies.set(cookie));
+    response = setupResponse;
+  }
   response.headers.set("Cache-Control", "private, no-store");
   return response;
 }

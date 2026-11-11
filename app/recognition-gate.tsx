@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { browserSupabase } from "../lib/supabase";
 import RecognitionApp from "./recognition-app";
@@ -12,6 +12,11 @@ export default function RecognitionGate({ protectedRoute = false }: { protectedR
   const [session, setSession] = useState<Session | null>(null);
   const [ready, setReady] = useState(false);
   const [passwordComplete, setPasswordComplete] = useState(false);
+  const [passwordLink, setPasswordLink] = useState<boolean | null>(null);
+  const signingOut = useRef(false);
+  useEffect(() => {
+    setPasswordLink(new URLSearchParams(window.location.search).get("set-password") === "1");
+  }, []);
   useEffect(() => {
     if (!supabase) { setReady(true); return; }
     supabase.auth.getSession().then(({ data }) => { setSession(data.session); setReady(true); }).catch(() => setReady(true));
@@ -19,13 +24,17 @@ export default function RecognitionGate({ protectedRoute = false }: { protectedR
     return () => listener.subscription.unsubscribe();
   }, [supabase]);
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || passwordLink === null) return;
     if (session && !protectedRoute) window.location.replace("/");
     if (!session && protectedRoute) window.location.replace("/login");
-  }, [ready, session, protectedRoute]);
-  if (!ready) return <div className="loading"><div className="brandmark">✦</div><p>Opening Bright Harbor...</p></div>;
+    if (session && protectedRoute && !passwordLink && session.user.user_metadata?.password_created !== true && !signingOut.current) {
+      signingOut.current = true;
+      supabase?.auth.signOut().finally(() => window.location.replace("/login"));
+    }
+  }, [ready, session, protectedRoute, passwordLink, supabase]);
+  if (!ready || passwordLink === null) return <div className="loading"><div className="brandmark">✦</div><p>Opening Bright Harbor...</p></div>;
   if (session && protectedRoute && (passwordComplete || session.user.user_metadata?.password_created === true)) return <RecognitionApp key={session.user.id} identity={{ email: session.user.email || "", name: session.user.user_metadata?.full_name || session.user.email || "" }} accessToken={session.access_token} onSignOut={async () => { await supabase?.auth.signOut(); window.location.replace("/login"); }} />;
-  if (session && protectedRoute) return <PasswordSetup onComplete={() => setPasswordComplete(true)} />;
+  if (session && protectedRoute && passwordLink) return <PasswordSetup email={session.user.email || ""} onComplete={() => { window.history.replaceState(null, "", "/"); setPasswordComplete(true); }} onSignOut={async () => { await supabase?.auth.signOut(); window.location.replace("/login"); }} />;
   if (session || protectedRoute) return <div className="loading"><div className="brandmark">✦</div><p>Opening Bright Harbor...</p></div>;
   return <main className="login-page">
     <div className="login-header"><img src="/bhh-logo.png" alt="Bright Harbor Healthcare" className="login-logo" /></div>
