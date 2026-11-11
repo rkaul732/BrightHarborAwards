@@ -37,11 +37,10 @@ export default function RecognitionGate({ protectedRoute = false }: { protectedR
   if (session && protectedRoute && (passwordComplete || session.user.user_metadata?.password_created === true)) return <RecognitionApp key={session.user.id} identity={{ email: session.user.email || "", name: session.user.user_metadata?.full_name || session.user.email || "" }} accessToken={session.access_token} onSignOut={async () => { await supabase?.auth.signOut(); window.location.replace("/login"); }} />;
   if (session || protectedRoute) return <div className="loading"><div className="brandmark">✦</div><p>Opening Bright Harbor...</p></div>;
   return <main className="login-page">
-    <div className="login-header"><img src="/bhh-logo.png" alt="Bright Harbor Healthcare" className="login-logo" /></div>
-    <section className="login-panel"><div className="eyebrow">A LITTLE APPRECIATION GOES A LONG WAY</div><h1>Great work deserves<br/><em>to be seen.</em></h1><p>Celebrate the people who make every day brighter. Share a shout-out, lift up a teammate, and watch appreciation spread.</p>
-      <LoginForm />
-      <div className="login-note">A private space for the Bright Harbor team</div></section>
-    <div className="login-decoration"><span>✳</span><span>★</span><span>✦</span><div className="recognition-sample"><div className="tiny-avatar">BH</div><div><strong>A teammate recognized a colleague</strong><p>“Your kindness made all the difference today.”</p><small>✦ Recognition points earned</small></div></div></div>
-    <footer className="login-footer">BRIGHT HARBOR RECOGNITION <span>Every contribution counts.</span></footer>
+    <header className="login-header"><img src="/bhh-logo.png" alt="Bright Harbor Healthcare" className="login-logo" /><span>EMPLOYEE RECOGNITION</span></header>
+    <div className="login-main"><section className="login-panel"><div className="eyebrow">A CULTURE OF APPRECIATION</div><h1>Recognition<br/><em>that matters.</em></h1><p>Celebrate the colleagues who make Bright Harbor stronger. Share meaningful recognition, see team achievements, and turn your points into rewards.</p>
+      <div className="login-feature"><div className="login-feature-line"/><span>01</span><div><strong>Make excellent work visible.</strong><small>A private space for every Bright Harbor team member.</small></div></div>
+    </section><section className="login-form-shell" aria-label="Bright Harbor account"><div className="login-form-heading"><span className="eyebrow">BRIGHT HARBOR AWARDS</span><h2>Your recognition space</h2><p>Use your work email to access the team platform.</p></div><LoginForm /><div className="login-note">Secure access for Bright Harbor staff</div></section></div>
+    <footer className="login-footer"><span>BRIGHT HARBOR HEALTHCARE</span><span>Recognizing the people behind better care.</span></footer>
   </main>;
 }
