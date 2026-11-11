@@ -27,14 +27,14 @@ export default function RecognitionGate({ protectedRoute = false }: { protectedR
     if (!ready || passwordLink === null) return;
     if (session && !protectedRoute) window.location.replace("/");
     if (!session && protectedRoute) window.location.replace("/login");
-    if (session && protectedRoute && !passwordLink && session.user.user_metadata?.password_created !== true && !signingOut.current) {
+    if (session && protectedRoute && !passwordLink && session.user.user_metadata?.must_change_password !== true && session.user.user_metadata?.password_created !== true && !signingOut.current) {
       signingOut.current = true;
       supabase?.auth.signOut().finally(() => window.location.replace("/login"));
     }
   }, [ready, session, protectedRoute, passwordLink, supabase]);
   if (!ready || passwordLink === null) return <div className="loading"><div className="brandmark">✦</div><p>Opening Bright Harbor...</p></div>;
+  if (session && protectedRoute && (passwordLink || session.user.user_metadata?.must_change_password === true)) return <PasswordSetup email={session.user.email || ""} temporary={session.user.user_metadata?.must_change_password === true} onComplete={() => { window.history.replaceState(null, "", "/"); setPasswordComplete(true); setPasswordLink(false); }} onSignOut={async () => { await supabase?.auth.signOut(); window.location.replace("/login"); }} />;
   if (session && protectedRoute && (passwordComplete || session.user.user_metadata?.password_created === true)) return <RecognitionApp key={session.user.id} identity={{ email: session.user.email || "", name: session.user.user_metadata?.full_name || session.user.email || "" }} accessToken={session.access_token} onSignOut={async () => { await supabase?.auth.signOut(); window.location.replace("/login"); }} />;
-  if (session && protectedRoute && passwordLink) return <PasswordSetup email={session.user.email || ""} onComplete={() => { window.history.replaceState(null, "", "/"); setPasswordComplete(true); }} onSignOut={async () => { await supabase?.auth.signOut(); window.location.replace("/login"); }} />;
   if (session || protectedRoute) return <div className="loading"><div className="brandmark">✦</div><p>Opening Bright Harbor...</p></div>;
   return <main className="login-page">
     <div className="login-header"><img src="/bhh-logo.png" alt="Bright Harbor Healthcare" className="login-logo" /></div>

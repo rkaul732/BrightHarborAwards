@@ -3,7 +3,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { browserSupabase } from "../lib/supabase";
 
-export default function PasswordSetup({ email, onComplete, onSignOut }: { email: string; onComplete: () => void; onSignOut: () => void }) {
+export default function PasswordSetup({ email, temporary = false, onComplete, onSignOut }: { email: string; temporary?: boolean; onComplete: () => void; onSignOut: () => void }) {
   const supabase = useMemo(browserSupabase, []);
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
@@ -19,7 +19,7 @@ export default function PasswordSetup({ email, onComplete, onSignOut }: { email:
     }
     setLoading(true);
     setError("");
-    const { error: authError } = await supabase.auth.updateUser({ password, data: { password_created: true } });
+    const { error: authError } = await supabase.auth.updateUser({ password, data: { password_created: true, must_change_password: false } });
     setLoading(false);
     if (authError) setError(authError.message);
     else { setPassword(""); setConfirmation(""); onComplete(); }
@@ -27,7 +27,7 @@ export default function PasswordSetup({ email, onComplete, onSignOut }: { email:
 
   return <main className="login-page">
     <div className="login-header"><img src="/bhh-logo.png" alt="Bright Harbor Healthcare" className="login-logo" /></div>
-    <section className="login-panel"><div className="eyebrow">FINISH SETTING UP YOUR ACCOUNT</div><h1>Create your<br/><em>password.</em></h1><p>Signed in as <strong>{email}</strong>. Choose a password for future sign-ins.</p>
+    <section className="login-panel"><div className="eyebrow">{temporary ? "TEMPORARY PASSWORD" : "FINISH SETTING UP YOUR ACCOUNT"}</div><h1>{temporary ? "Change your" : "Create your"}<br/><em>password.</em></h1><p>Signed in as <strong>{email}</strong>. Choose a new password with at least 12 characters for future sign-ins.</p>
       <form className="login-form" onSubmit={submit}>
         <label htmlFor="setup-password">New password</label><input id="setup-password" type="password" autoComplete="new-password" minLength={12} required value={password} onChange={(event) => setPassword(event.target.value)} />
         <label htmlFor="setup-confirm">Confirm password</label><input id="setup-confirm" type="password" autoComplete="new-password" minLength={12} required value={confirmation} onChange={(event) => setConfirmation(event.target.value)} />

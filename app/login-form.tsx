@@ -48,6 +48,10 @@ export default function LoginForm() {
         const { data, error: authError } = await supabase.auth.signInWithPassword({ email: address, password });
         if (authError) setError(authError.message);
         else {
+          if (data.user.user_metadata?.must_change_password === true) {
+            window.location.replace("/?set-password=1");
+            return;
+          }
           if (data.user.user_metadata?.password_created !== true) {
             const { error: updateError } = await supabase.auth.updateUser({ data: { password_created: true } });
             if (updateError) throw updateError;
