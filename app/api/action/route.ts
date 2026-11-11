@@ -1,12 +1,13 @@
 import { authenticatedUser, serverSupabase } from "../../../lib/supabase";
 import { pointsFor } from "../../../lib/points";
 import { isBrightHarborEmail } from "../../../lib/email";
+import { validPrograms } from "../../../lib/programs";
 
 export const dynamic = "force-dynamic";
 const roles = ["employee", "supervisor", "director", "admin"];
 const clean = (value: unknown, max: number) => typeof value === "string" ? value.trim().slice(0, max) : "";
 const fail = (error: string, status = 400) => Response.json({ error }, { status });
-type Person = { id: string; email: string; name: string; program: string; role: string };
+type Person = { id: string; email: string; name: string; program: string; programs?: string[]; role: string };
 const escapeHtml = (text: string) => text.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char] || char);
 
 async function notifyRecipient(recipient: Person, author: Person, message: string, points: number) {
@@ -26,7 +27,7 @@ export async function POST(request: Request) {
     const db = serverSupabase();
     const body = await request.json() as Record<string, unknown>;
     const email = user.email.trim().toLowerCase();
-    const { data: me, error: memberError } = await db.from("staff").select("id,email,name,program,role").eq("email", email).maybeSingle();
+    const { data: me, error: memberError } = await db.from("staff").select("id,email,name,program,programs,role").eq("email", email).maybeSingle();
     if (memberError) throw memberError;
     if (body.action === "setup") {
       if (me) return fail("Profile already exists", 409);
@@ -36,7 +37,7 @@ export async function POST(request: Request) {
       if (count !== 0) return fail("Administrator profile already exists", 409);
       const name = clean(body.name, 80), program = clean(body.program, 80);
       if (!name || !program) return fail("Name and program are required");
-      const { error } = await db.from("staff").insert({ email, name, program, role: "admin" });
+      const { error } = await db.from("staff").insert({ email, name, program, programs: [program], role: "admin" });
       if (error) throw error;
     } else {
       if (!me) return fail("Your email is not in the staff directory", 403);
@@ -44,13 +45,29 @@ export async function POST(request: Request) {
         if (me.role !== "admin") return fail("Admin access required", 403);
         const name = clean(body.name, 80), staffEmail = clean(body.email, 160).toLowerCase(), program = clean(body.program, 80), role = clean(body.role, 20);
         if (!name || !program || !isBrightHarborEmail(staffEmail) || !roles.includes(role)) return fail("Enter a valid name, @brightharbor.org email, program, and role");
-        const { error } = await db.from("staff").insert({ name, email: staffEmail, program, role });
+        const { error } = await db.from("staff").insert({ name, email: staffEmail, program, programs: [program], role });
         if (error) throw error;
+      } else if (body.action === "approveSignup") {
+        if (me.role !== "admin") return fail("Admin access required", 403);
+        const userId = clean(body.userId, 100);
+        const { data: signup, error: signupError } = await db.from("signup_requests")
+          .select("user_id,email,name,employee_type,programs").eq("user_id", userId).maybeSingle();
+        if (signupError) throw signupError;
+        if (!signup || !validPrograms(signup.programs) || !isBrightHarborEmail(signup.email)) return fail("Pending account not found", 404);
+        const role = signup.employee_type === "Coordinator" ? "supervisor" :
+          signup.employee_type === "Director/Admin" ? (body.approvedRole === "admin" ? "admin" : "director") : "employee";
+        const { error } = await db.from("staff").insert({
+          email: signup.email, name: signup.name, program: signup.programs[0],
+          programs: signup.programs, role,
+        });
+        if (error) throw error;
+        const { error: deleteError } = await db.from("signup_requests").delete().eq("user_id", userId);
+        if (deleteError) throw deleteError;
       } else if (body.action === "shoutout") {
         const recipientId = clean(body.recipientId, 100), message = clean(body.message, 1200);
         if (!recipientId || !message) return fail("Select a colleague and write a message");
         if (recipientId === me.id) return fail("Choose someone other than yourself");
-        const { data: recipient, error: recipientError } = await db.from("staff").select("id,email,name,program,role").eq("id", recipientId).maybeSingle();
+        const { data: recipient, error: recipientError } = await db.from("staff").select("id,email,name,program,programs,role").eq("id", recipientId).maybeSingle();
         if (recipientError) throw recipientError;
         if (!recipient) return fail("Recipient not found", 404);
         const points = pointsFor(me, recipient);

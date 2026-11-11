@@ -1,4 +1,5 @@
 import { authenticatedUser, serverSupabase } from "../../../lib/supabase";
+import { EMPLOYEE_TYPES, validPrograms } from "../../../lib/programs";
 
 export const dynamic = "force-dynamic";
 
@@ -8,20 +9,34 @@ export async function GET(request: Request) {
     if (!user?.email) return Response.json({ error: "Sign in required" }, { status: 401 });
     const db = serverSupabase();
     const email = user.email.trim().toLowerCase();
-    const { data: me, error: memberError } = await db.from("staff").select("id,email,name,program,role").eq("email", email).maybeSingle();
+    const { data: me, error: memberError } = await db.from("staff").select("id,email,name,program,programs,role").eq("email", email).maybeSingle();
     if (memberError) throw memberError;
     if (!me) {
       const { count, error: countError } = await db.from("staff").select("id", { count: "exact", head: true });
       if (countError) throw countError;
-      return Response.json({ setup: true, firstUser: count === 0 && email === process.env.BOOTSTRAP_ADMIN_EMAIL?.trim().toLowerCase(), identity: { email, name: user.user_metadata?.full_name || email } });
+      const firstUser = count === 0 && email === process.env.BOOTSTRAP_ADMIN_EMAIL?.trim().toLowerCase();
+      const metadata = user.user_metadata || {};
+      let requested = false;
+      if (!firstUser && user.email_confirmed_at &&
+          typeof metadata.full_name === "string" && metadata.full_name.trim() &&
+          EMPLOYEE_TYPES.includes(metadata.employee_type) && validPrograms(metadata.programs)) {
+        const { error } = await db.from("signup_requests").upsert({
+          user_id: user.id, email, name: metadata.full_name.trim().slice(0, 80),
+          employee_type: metadata.employee_type, programs: metadata.programs,
+        }, { onConflict: "user_id", ignoreDuplicates: true });
+        if (error) throw error;
+        requested = true;
+      }
+      return Response.json({ setup: true, firstUser, requested, identity: { email, name: metadata.full_name || email } });
     }
-    const [staff, shoutouts, comments, likes] = await Promise.all([
-      db.from("staff").select("id,email,name,program,role").order("name"),
+    const [staff, shoutouts, comments, likes, pending] = await Promise.all([
+      db.from("staff").select("id,email,name,program,programs,role").order("name"),
       db.from("shoutouts").select("id,author_id,recipient_id,message,points,created_at").order("created_at", { ascending: false }).limit(100),
       db.from("comments").select("id,shoutout_id,author_id,message,created_at").order("created_at"),
       db.from("likes").select("id,author_id,shoutout_id,comment_id"),
+      me.role === "admin" ? db.from("signup_requests").select("user_id,email,name,employee_type,programs,created_at").order("created_at") : Promise.resolve({ data: [], error: null }),
     ]);
-    for (const result of [staff, shoutouts, comments, likes]) if (result.error) throw result.error;
+    for (const result of [staff, shoutouts, comments, likes, pending]) if (result.error) throw result.error;
     // The feed is intentionally limited to recent posts. Read the award history in
     // pages so dashboard totals and the leaderboard include every recognition.
     const totals = new Map<string, { points: number; incoming: number; outgoing: number }>();
@@ -71,7 +86,7 @@ export async function GET(request: Request) {
       orderOffset += pageSize;
     }
     return Response.json({
-      setup: false, me, leaderboard,
+      setup: false, me, leaderboard, pendingRequests: pending.data || [],
       myStats: totals.get(me.id) || { points: 0, incoming: 0, outgoing: 0 },
       store: {
         products: products.data || [],

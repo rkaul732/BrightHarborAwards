@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { browserSupabase } from "../lib/supabase";
 import { isBrightHarborEmail } from "../lib/email";
+import { EMPLOYEE_TYPES, type EmployeeType, validPrograms } from "../lib/programs";
+import ProgramPicker from "./program-picker";
 
 type Mode = "signIn" | "create" | "link";
 
@@ -12,6 +14,9 @@ export default function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [employeeType, setEmployeeType] = useState<EmployeeType | "">("");
+  const [programs, setPrograms] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
@@ -35,6 +40,10 @@ export default function LoginForm() {
     setSent(false);
     if (mode === "create" && (password.length < 12 || password !== confirmPassword)) {
       setError(password.length < 12 ? "Use at least 12 characters for your password." : "The passwords do not match.");
+      return;
+    }
+    if (mode === "create" && (!fullName.trim() || !employeeType || !validPrograms(programs))) {
+      setError("Enter your full name, select one employee type, and choose at least one program.");
       return;
     }
     setLoading(true);
@@ -62,7 +71,9 @@ export default function LoginForm() {
         const { data, error: authError } = await supabase.auth.signUp({
           email: address,
           password,
-          options: { emailRedirectTo: `${window.location.origin}/auth/callback`, data: { password_created: true } },
+          options: { emailRedirectTo: `${window.location.origin}/auth/callback`, data: {
+            password_created: true, full_name: fullName.trim(), employee_type: employeeType, programs,
+          } },
         });
         if (authError) setError(authError.message);
         else if (data.session) {
@@ -92,6 +103,11 @@ export default function LoginForm() {
   return <form className="login-form" onSubmit={submit}>
     <div className="login-modes"><button type="button" className={mode === "signIn" ? "active" : ""} onClick={() => changeMode("signIn")}>Sign in</button><button type="button" className={mode === "create" ? "active" : ""} onClick={() => changeMode("create")}>First time? Create account</button></div>
     <label htmlFor="login-email">Work email</label><input id="login-email" type="email" autoComplete="email" required placeholder="you@brightharbor.org" value={email} onChange={(event) => setEmail(event.target.value)} /><div className="email-domain-hint">Only @brightharbor.org email addresses are accepted.</div>
+    {mode === "create" && <><label htmlFor="signup-name">Full name</label><input id="signup-name" type="text" autoComplete="name" required maxLength={80} value={fullName} onChange={(event) => setFullName(event.target.value)} />
+      <label htmlFor="signup-type">Employee Type</label><select id="signup-type" required value={employeeType} onChange={(event) => setEmployeeType(event.target.value as EmployeeType)}><option value="">Select one employee type</option>{EMPLOYEE_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}</select>
+      <ProgramPicker value={programs} onChange={setPrograms} />
+      <p className="signup-approval-note">After confirming your email, an administrator will review your selections before your profile appears in the directory.</p>
+    </>}
     {mode !== "link" && <><label htmlFor="login-password">{mode === "create" ? "Create password" : "Password"}</label><input id="login-password" type="password" autoComplete={mode === "create" ? "new-password" : "current-password"} minLength={mode === "create" ? 12 : undefined} required value={password} onChange={(event) => setPassword(event.target.value)} /></>}
     {mode === "create" && <><label htmlFor="login-confirm">Confirm password</label><input id="login-confirm" type="password" autoComplete="new-password" minLength={12} required value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} /></>}
     <button disabled={loading} className="button button-primary login-button" type="submit">{loading ? "Please wait..." : mode === "create" ? "Create password and email confirmation" : mode === "link" ? "Email me a sign-in link" : "Sign in"} <span>→</span></button>
