@@ -51,7 +51,7 @@ export async function GET(request: Request) {
       .sort((a, b) => b.points - a.points || a.name.localeCompare(b.name))
       .slice(0, 3);
     const [products, recentOrders, adminOrders] = await Promise.all([
-      db.from("store_products").select("id,name,description,price_cents,image_url,source_url,options").eq("active", true).order("sort_order").order("name"),
+      db.from("store_products").select("id,name,description,price_cents,image_url,source_url,options,option_price_adjustments,personalization_fields").eq("active", true).order("sort_order").order("name"),
       db.from("store_orders").select("id,product_id,product_name,selected_options,price_cents,points_spent,status,created_at")
         .eq("staff_id", me.id).order("created_at", { ascending: false }).limit(100),
       me.role === "admin" ? db.from("store_orders")
