@@ -1,5 +1,6 @@
 import { authenticatedUser, serverSupabase } from "../../../lib/supabase";
 import { EMPLOYEE_TYPES, validPrograms } from "../../../lib/programs";
+import { isAdmin } from "../../../lib/roles";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +35,7 @@ export async function GET(request: Request) {
       db.from("shoutouts").select("id,author_id,recipient_id,message,points,created_at").order("created_at", { ascending: false }).limit(100),
       db.from("comments").select("id,shoutout_id,author_id,message,created_at").order("created_at"),
       db.from("likes").select("id,author_id,shoutout_id,comment_id"),
-      me.role === "admin" ? db.from("signup_requests").select("user_id,email,name,employee_type,programs,created_at").order("created_at") : Promise.resolve({ data: [], error: null }),
+      isAdmin(me.role) ? db.from("signup_requests").select("user_id,email,name,employee_type,programs,created_at").order("created_at") : Promise.resolve({ data: [], error: null }),
     ]);
     for (const result of [staff, shoutouts, comments, likes, pending]) if (result.error) throw result.error;
     // The feed is intentionally limited to recent posts. Read the award history in
@@ -69,7 +70,7 @@ export async function GET(request: Request) {
       db.from("store_products").select("id,name,description,price_cents,image_url,source_url,options,option_price_adjustments,personalization_fields").eq("active", true).order("sort_order").order("name"),
       db.from("store_orders").select("id,product_id,product_name,selected_options,price_cents,points_spent,status,created_at")
         .eq("staff_id", me.id).order("created_at", { ascending: false }).limit(100),
-      me.role === "admin" ? db.from("store_orders")
+      isAdmin(me.role) ? db.from("store_orders")
         .select("id,staff_id,product_name,selected_options,price_cents,points_spent,status,created_at")
         .order("created_at", { ascending: false }).limit(200) : Promise.resolve({ data: [], error: null }),
     ]);

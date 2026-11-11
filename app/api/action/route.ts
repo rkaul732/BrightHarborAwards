@@ -2,6 +2,7 @@ import { authenticatedUser, serverSupabase } from "../../../lib/supabase";
 import { pointsFor } from "../../../lib/points";
 import { isBrightHarborEmail } from "../../../lib/email";
 import { validPrograms } from "../../../lib/programs";
+import { isAdmin, isSuperAdmin, SUPER_ADMIN_EMAIL } from "../../../lib/roles";
 
 export const dynamic = "force-dynamic";
 const roles = ["employee", "supervisor", "director", "admin"];
@@ -37,23 +38,25 @@ export async function POST(request: Request) {
       if (count !== 0) return fail("Administrator profile already exists", 409);
       const name = clean(body.name, 80), program = clean(body.program, 80);
       if (!name || !program) return fail("Name and program are required");
-      const { error } = await db.from("staff").insert({ email, name, program, programs: [program], role: "admin" });
+      const { error } = await db.from("staff").insert({ email, name, program, programs: [program], role: email === SUPER_ADMIN_EMAIL ? "super_admin" : "admin" });
       if (error) throw error;
     } else {
       if (!me) return fail("Your email is not in the staff directory", 403);
       if (body.action === "addStaff") {
-        if (me.role !== "admin") return fail("Admin access required", 403);
+        if (!isAdmin(me.role)) return fail("Admin access required", 403);
         const name = clean(body.name, 80), staffEmail = clean(body.email, 160).toLowerCase(), program = clean(body.program, 80), role = clean(body.role, 20);
         if (!name || !program || !isBrightHarborEmail(staffEmail) || !roles.includes(role)) return fail("Enter a valid name, @brightharbor.org email, program, and role");
+        if (role === "admin" && !isSuperAdmin(me.role)) return fail("Only the site super admin can grant administrator access", 403);
         const { error } = await db.from("staff").insert({ name, email: staffEmail, program, programs: [program], role });
         if (error) throw error;
       } else if (body.action === "approveSignup") {
-        if (me.role !== "admin") return fail("Admin access required", 403);
+        if (!isAdmin(me.role)) return fail("Admin access required", 403);
         const userId = clean(body.userId, 100);
         const { data: signup, error: signupError } = await db.from("signup_requests")
           .select("user_id,email,name,employee_type,programs").eq("user_id", userId).maybeSingle();
         if (signupError) throw signupError;
         if (!signup || !validPrograms(signup.programs) || !isBrightHarborEmail(signup.email)) return fail("Pending account not found", 404);
+        if (body.approvedRole === "admin" && !isSuperAdmin(me.role)) return fail("Only the site super admin can grant administrator access", 403);
         const role = signup.employee_type === "Coordinator" ? "supervisor" :
           signup.employee_type === "Director/Admin" ? (body.approvedRole === "admin" ? "admin" : "director") : "employee";
         const { error } = await db.from("staff").insert({
@@ -63,6 +66,15 @@ export async function POST(request: Request) {
         if (error) throw error;
         const { error: deleteError } = await db.from("signup_requests").delete().eq("user_id", userId);
         if (deleteError) throw deleteError;
+      } else if (body.action === "updateStaffRole") {
+        if (!isSuperAdmin(me.role)) return fail("Site super admin access required", 403);
+        const staffId = clean(body.staffId, 100), role = clean(body.role, 20);
+        if (!staffId || !roles.includes(role)) return fail("Choose a valid team member and role");
+        const { data: target, error: targetError } = await db.from("staff").select("id,role").eq("id", staffId).maybeSingle();
+        if (targetError) throw targetError;
+        if (!target || isSuperAdmin(target.role)) return fail("The site super admin role cannot be changed here", 403);
+        const { error } = await db.from("staff").update({ role }).eq("id", staffId);
+        if (error) throw error;
       } else if (body.action === "shoutout") {
         const recipientId = clean(body.recipientId, 100), message = clean(body.message, 1200);
         if (!recipientId || !message) return fail("Select a colleague and write a message");
@@ -102,7 +114,7 @@ export async function POST(request: Request) {
         if (error) return fail(error.message, 400);
         return Response.json({ ok: true, orderId });
       } else if (body.action === "updateStoreOrder") {
-        if (me.role !== "admin") return fail("Admin access required", 403);
+        if (!isAdmin(me.role)) return fail("Admin access required", 403);
         const orderId = clean(body.orderId, 100);
         const status = body.status;
         if (!orderId || (status !== "fulfilled" && status !== "cancelled")) return fail("Choose a valid order status");
