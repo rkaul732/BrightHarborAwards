@@ -22,8 +22,37 @@ export async function GET(request: Request) {
       db.from("likes").select("id,author_id,shoutout_id,comment_id"),
     ]);
     for (const result of [staff, shoutouts, comments, likes]) if (result.error) throw result.error;
+    // The feed is intentionally limited to recent posts. Read the award history in
+    // pages so dashboard totals and the leaderboard include every recognition.
+    const totals = new Map<string, { points: number; incoming: number; outgoing: number }>();
+    let offset = 0;
+    const pageSize = 1000;
+    while (true) {
+      const { data: awards, error } = await db.from("shoutouts")
+        .select("author_id,recipient_id,points")
+        .order("id")
+        .range(offset, offset + pageSize - 1);
+      if (error) throw error;
+      for (const award of awards || []) {
+        const recipient = totals.get(award.recipient_id) || { points: 0, incoming: 0, outgoing: 0 };
+        recipient.points += award.points;
+        recipient.incoming += 1;
+        totals.set(award.recipient_id, recipient);
+        const author = totals.get(award.author_id) || { points: 0, incoming: 0, outgoing: 0 };
+        author.outgoing += 1;
+        totals.set(award.author_id, author);
+      }
+      if (!awards || awards.length < pageSize) break;
+      offset += pageSize;
+    }
+    const leaderboard = (staff.data || [])
+      .map(({ id, name, program }) => ({ id, name, program, points: totals.get(id)?.points || 0 }))
+      .filter((person) => person.points > 0)
+      .sort((a, b) => b.points - a.points || a.name.localeCompare(b.name))
+      .slice(0, 3);
     return Response.json({
-      setup: false, me,
+      setup: false, me, leaderboard,
+      myStats: totals.get(me.id) || { points: 0, incoming: 0, outgoing: 0 },
       staff: staff.data,
       shoutouts: shoutouts.data?.map((row) => ({ id: row.id, authorId: row.author_id, recipientId: row.recipient_id, message: row.message, points: row.points, createdAt: row.created_at })),
       comments: comments.data?.map((row) => ({ id: row.id, shoutoutId: row.shoutout_id, authorId: row.author_id, message: row.message, createdAt: row.created_at })),
