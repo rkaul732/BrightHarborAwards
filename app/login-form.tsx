@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { browserSupabase } from "../lib/supabase";
+import { isBrightHarborEmail } from "../lib/email";
 
 type Mode = "signIn" | "create" | "link";
 
@@ -39,6 +40,10 @@ export default function LoginForm() {
     setLoading(true);
     try {
       const address = email.trim().toLowerCase();
+      if (!isBrightHarborEmail(address)) {
+        setError("Use your @brightharbor.org work email address.");
+        return;
+      }
       if (mode === "signIn") {
         const { data, error: authError } = await supabase.auth.signInWithPassword({ email: address, password });
         if (authError) setError(authError.message);
@@ -82,7 +87,7 @@ export default function LoginForm() {
   if (!supabase) return <div className="login-feedback error">Supabase has not been configured for this deployment yet.</div>;
   return <form className="login-form" onSubmit={submit}>
     <div className="login-modes"><button type="button" className={mode === "signIn" ? "active" : ""} onClick={() => changeMode("signIn")}>Sign in</button><button type="button" className={mode === "create" ? "active" : ""} onClick={() => changeMode("create")}>First time? Create account</button></div>
-    <label htmlFor="login-email">Work email</label><input id="login-email" type="email" autoComplete="email" required placeholder="you@brightharbor.org" value={email} onChange={(event) => setEmail(event.target.value)} />
+    <label htmlFor="login-email">Work email</label><input id="login-email" type="email" autoComplete="email" required placeholder="you@brightharbor.org" value={email} onChange={(event) => setEmail(event.target.value)} /><div className="email-domain-hint">Only @brightharbor.org email addresses are accepted.</div>
     {mode !== "link" && <><label htmlFor="login-password">{mode === "create" ? "Create password" : "Password"}</label><input id="login-password" type="password" autoComplete={mode === "create" ? "new-password" : "current-password"} minLength={mode === "create" ? 12 : undefined} required value={password} onChange={(event) => setPassword(event.target.value)} /></>}
     {mode === "create" && <><label htmlFor="login-confirm">Confirm password</label><input id="login-confirm" type="password" autoComplete="new-password" minLength={12} required value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} /></>}
     <button disabled={loading} className="button button-primary login-button" type="submit">{loading ? "Please wait..." : mode === "create" ? "Create password and email confirmation" : mode === "link" ? "Email me a sign-in link" : "Sign in"} <span>→</span></button>

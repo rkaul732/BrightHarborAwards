@@ -1,5 +1,6 @@
 import { authenticatedUser, serverSupabase } from "../../../lib/supabase";
 import { pointsFor } from "../../../lib/points";
+import { isBrightHarborEmail } from "../../../lib/email";
 
 export const dynamic = "force-dynamic";
 const roles = ["employee", "supervisor", "director", "admin"];
@@ -42,7 +43,7 @@ export async function POST(request: Request) {
       if (body.action === "addStaff") {
         if (me.role !== "admin") return fail("Admin access required", 403);
         const name = clean(body.name, 80), staffEmail = clean(body.email, 160).toLowerCase(), program = clean(body.program, 80), role = clean(body.role, 20);
-        if (!name || !program || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(staffEmail) || !roles.includes(role)) return fail("Enter a valid name, email, program, and role");
+        if (!name || !program || !isBrightHarborEmail(staffEmail) || !roles.includes(role)) return fail("Enter a valid name, @brightharbor.org email, program, and role");
         const { error } = await db.from("staff").insert({ name, email: staffEmail, program, role });
         if (error) throw error;
       } else if (body.action === "shoutout") {

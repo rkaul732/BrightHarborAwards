@@ -6,7 +6,9 @@ A staff recognition app for Bright Harbor Healthcare. It runs on Netlify with Ne
 
 - Password sign-in; new staff create a password, then confirm their account by email before signing in
 - Existing passwordless accounts can use an email link to create a password; a saved passwordless session opens the login page until they use that link
+- Account creation and directory entries require an `@brightharbor.org` email address; a database trigger also rejects direct Supabase signups from other domains
 - Staff shout-outs, feed likes, comments, and comment likes
+- Full-history feed search by shout-out text or the nominator's or recipient's name, with more results loaded in pages
 - Point calculation based on the nominator's role and program relative to an employee recipient
 - Admin-managed staff directory and personal dashboard
 - Optional Resend email when someone receives a shout-out
@@ -15,7 +17,7 @@ Supervisors and directors can receive shout-outs, but earn zero points because t
 
 ## Set up Supabase
 
-1. The recognition schema is applied to the `BrightHarborAwards` Supabase project. The matching source migration is `supabase/migrations/20261110191014_recognition.sql`.
+1. The recognition schema, search function, and Auth email-domain trigger are applied to the `BrightHarborAwards` Supabase project. Matching source migrations are in `supabase/migrations/`.
 2. Keep **Email** sign-in, **Allow new users to sign up**, and **Confirm Email** enabled in Supabase Auth. Creating a password calls Supabase `signUp`, which sends the account confirmation email. Set `https://brightharborawards.netlify.app` as the Site URL and allow `https://brightharborawards.netlify.app/auth/callback` as a redirect URL. Allow `http://localhost:3000/auth/callback` for local development. Confirmation and sign-in links must return to `/auth/callback` so the server can exchange the one-time code for a cookie session.
 3. Copy `.env.example` to `.env.local` for local development. Set `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, and `BOOTSTRAP_ADMIN_EMAIL`. The bootstrap address is the only person allowed to create the initial administrator profile.
 4. Keep the secret key server-side. It must never be exposed with `NEXT_PUBLIC_`.

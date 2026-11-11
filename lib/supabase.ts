@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { createBrowserClient } from "@supabase/ssr";
+import { isBrightHarborEmail } from "./email";
 
 export function browserSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -23,5 +24,5 @@ export async function authenticatedUser(request: Request) {
   if (!url || !key) throw new Error("Supabase public credentials are not configured");
   const authClient = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
   const { data, error } = await authClient.auth.getUser(token);
-  return error ? null : data.user;
+  return error || !data.user?.email || !isBrightHarborEmail(data.user.email) ? null : data.user;
 }
